@@ -1,30 +1,27 @@
 use crate::protocol::IpcEvent;
 use ipc_channel::ipc::IpcSender;
-use rdev::{listen, Event, EventType};
+use rdev::{Event, EventType, listen};
 use serde_json::json;
 use std::env;
+use std::process::exit;
 use std::sync::{
-    mpsc::{channel, Sender},
     Arc,
+    mpsc::{Sender, channel},
 };
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 
 pub fn run_child() {
-    let cat = Arc::new(CatSender::connect());
+    let cat = CatSender::connect();
     cat.send_ipc_event(IpcEvent::default());
     cat.send_ipc_event(IpcEvent::default());
     cat.send_ipc_event(IpcEvent::default());
     cat.send_ipc_event(IpcEvent::default());
 
-    let cat_clone = cat.clone();
     thread::spawn(move || {
-        sleep(Duration::from_secs(60));
-        cat_clone.send_ipc_event(IpcEvent {
-            action: "exit".to_string(),
-            json: "".to_string(),
-        });
+        sleep(Duration::from_secs(10));
+        exit(0);
     });
 
     let callback = move |event: Event| {
@@ -32,35 +29,35 @@ pub fn run_child() {
             EventType::ButtonPress(button) => {
                 let json = json!(format!("{:?}", button));
                 IpcEvent {
-                    action: String::new(),
+                    action: "rdev".to_string(),
                     json: json.to_string(),
                 }
             }
             EventType::ButtonRelease(button) => {
                 let json = json!(format!("{:?}", button));
                 IpcEvent {
-                    action: String::new(),
+                    action: "rdev".to_string(),
                     json: json.to_string(),
                 }
             }
             EventType::MouseMove { x, y } => {
                 let json = json!({ "x": x, "y": y });
                 IpcEvent {
-                    action: String::new(),
+                    action: "rdev".to_string(),
                     json: json.to_string(),
                 }
             }
             EventType::KeyPress(key) => {
                 let json = json!(format!("{:?}", key));
                 IpcEvent {
-                    action: String::new(),
+                    action: "rdev".to_string(),
                     json: json.to_string(),
                 }
             }
             EventType::KeyRelease(key) => {
                 let json = json!(format!("{:?}", key));
                 IpcEvent {
-                    action: String::new(),
+                    action: "rdev".to_string(),
                     json: json.to_string(),
                 }
             }
@@ -101,6 +98,7 @@ impl CatSender {
         let sender = self.sender.clone();
         if let Err(e) = sender.send(event) {
             eprintln!("failed to sync ipc_event: {:?}", e);
+            exit(1);
         }
     }
 }
